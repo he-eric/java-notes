@@ -1,0 +1,53 @@
+Item 10 : Obey the general contract when override equals
+
+Do not override equals when one of the following applies:
+    - Each instance of the class is inherently unique
+        - EG: The Thread class which represents an active entity rather than values
+    - There is no need for the class to provide a "logical equality" test.
+        - EG: The Pattern class which represents a regex but the designers didn't think clients would need or want this functionality
+    - A superclass has already overridden equals and the superclass behavior is appropriate for this class
+        - EG: Set/List/Map implementations inherit their equals implementation from AbstractSet/AbstractList/AbstractMap
+    - The class is private or package-private and you are certain that its equals method will never be invoked
+
+Do override equals when
+    A class has a notion of logical equality that differs from object identity
+    AND
+    A superclass has not already overridden equals
+
+This is generally the case for value classes. A value class is a class that represents a value.
+A programmer using a value classes equals methods expects to find out whether they are logically equivalent, not whether they refer to the same object.
+Overriding the equals methods is necessary to satisfying programmer expectations and enabling instances to serve as map key or set elements with predictable, desirable behavior.
+
+One kind of value class that does not require the equals method to be overridden is a class that uses instance control (Item 1) to ensure that at most one object
+exists with each value. (Enum types Item 34).
+
+General contract for equals
+Reflexive - For any non-null reference value x, x.equals(x) must return true
+Symmetric - For any non-null reference values x and y, x.equals(y) must return true if and only if y.equals(x) returns true
+Transitive - For any non-null reference values x, y, z, if x.equals(y) returns true and y.equals(x) returns true, then x.equals(z) must return true
+Consistent - For any non-null reference values x and y, multiple calls of x.equals(y) must consistently return true or consistently return false, provided
+no information used in equals comparisons is modified.
+Nonnull - For any non-null reference x, x.equals(null) must return false
+
+Do not violate the above contract. Instances of one class are frequently passed to another. Many classes, including all collection classes, depend on the objects passed to them
+obeying the equals contract.
+
+Closer examination of each requirement
+1. Reflexivity - Hard to violate this unintentionally. If violated, then when adding an instance of your class to a collection, the contains method might say the collection didn't contain
+the instance you just added
+
+2. Symmetry - It's not hard to violate this unintentionally. See kata.item10.symmetry.SymmetryTests.
+The well-intentioned equals method in this class attempts to interoperate with ordinary strings. The problem is that while the equals method in CaseInsensitiveString knows about
+ordinary strings, the equals method in String is oblivious to case-insensitive strings. Suppose you put a case insensitive string into a collection.
+
+    CaseInsensitiveString cis = new CaseInsensitiveString("Polish")
+    List<CaseInsensitiveString> list = new ArrayList<>();
+    list.add(cis);
+
+    //What does this return???
+    list.contains(new String("polish"));
+
+Who knows what contains will return. In the current OpenJDK implementation it will return false. In another implementation it may return true or a run time exception. Once you've
+violated the equals contract, you simply don't know how other objects will behave when confronted with your object.
+
+3. Transitivity - It's not hard to violate this unintentionally as well.
